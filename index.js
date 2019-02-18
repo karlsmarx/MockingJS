@@ -6,6 +6,8 @@ const sqlStatement = "CREATE TABLE IF NOT EXISTS `mydb`.`table1`( \n \
 `table1col` BIT(32) NULL, \n \
 `table1col1` TINYINT(1) UNSIGNED NULL, \n \
 	`table1col1` TINYINT UNSIGNED NULL, \n \
+	`table1col1` TINYINT UNSIGNED NOT NULL, \n \
+	`table1col1` TINYINT NULL, \n \
 `table1col2` SMALLINT(1) UNSIGNED NULL, \n \
 	`table1col2` SMALLINT UNSIGNED NULL, \n \
 `table1col3` MEDIUMINT(1) NULL, \n \
@@ -24,7 +26,9 @@ ENGINE = InnoDB;";
 const lines = sqlStatement.split("\n");
 
 lines.forEach((line) => {
-	const result = generator.BIT(line);
+	const result = generator.BIGINT(line);
 
-	if (result) console.log(result);
+	if (result) {
+		console.log(result);
+	}
 });
