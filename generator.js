@@ -331,6 +331,8 @@ const FIXED = DECIMAL;
  *
  * In fact every number in JS could be represented by a double precision
  * floating point number, and when his limit is reached this came a Infinity.
+ *
+ * Maybe could be converted to Number.MAX_VALUE for double and Number.MAX_VALUE / 2 for float (54 and 32 bits)
  */
 const FLOAT = (line) => {
 	const regex = /(FLOAT(\(\d+(,\d+)?\))?)/g;
