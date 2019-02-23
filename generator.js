@@ -410,8 +410,8 @@ const DOUBLE = (line) => {
 				const validator = /(-?\d+)\.(\d+)/g;
 				const result = validator.exec(float);
 
-				if (!result) return false;
-				return true;
+				if (result) return true;
+				return false;
 			},
 		};
 
@@ -441,6 +441,130 @@ const DOUBLE = (line) => {
 const DOUBLE_PRECISION = DOUBLE;
 const REAL = DOUBLE;
 
+const DATE = (line) => {
+	const regex = /(DATE)/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "date",
+			nullable: !elements.includes("NOT"),
+
+			// Validate for 1000-01-01 to 9999-12-31
+			validator: (date) => {
+				const result = date.match(/([0-9]{4}-(0[1-9]|1[0-2])-([0-2][1-9]|3[0-1]))/g);
+				if (result) return true;
+
+				return false;
+			},
+		};
+	}
+
+	return false;
+};
+
+const DATETIME = (line) => {
+	const regex = /(DATETIME(\([1-6]\)))/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "date",
+			nullable: !elements.includes("NOT"),
+
+			// Validate for 1000-01-01 00:00:00.000000 to 9999-12-31 23:59:59.999999
+			validator: (datetime) => {
+				const initRange = Date.parse("1000-01-01 00:00:00");
+				const finalRange = Date.parse("9999-12-31 23:59:59");
+
+				const date = Date.parse(datetime);
+
+				if ((initRange <= date) && (finalRange >= date)) return true;
+
+				return false;
+			},
+		};
+	}
+
+	return false;
+};
+
+const TIMESTAMP = (line) => {
+	const regex = /(TIMESTAMP(\([1-6]\)))/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "date",
+			nullable: !elements.includes("NOT"),
+
+			// Validate for 1970-01-01 00:00:00.000000 to 2038-01-19 03:14:07.999999
+			validator: (timestamp) => {
+				const initRange = Date.parse("1970-01-01 00:00:00");
+				const finalRange = Date.parse("2038-01-19 03:14:07");
+
+				const date = Date.parse(timestamp);
+
+				if ((initRange < date) && (finalRange > date)) return true;
+
+				return false;
+			},
+		};
+	}
+
+	return false;
+};
+
+const TIME = (line) => {
+	const regex = /(TIME(\([1-6]\)))/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "date",
+			nullable: !elements.includes("NOT"),
+
+			// Validate for -838:59:59.00000 to 838:59:59.00000
+			validator: (time) => {
+				const result = time.match(/(-?([0-7]\d{2}|8[0-3][0-8]):[0-5]\d:[0-5]\d(.\d{0,6})?)/g);
+
+				if (result) return true;
+
+				return false;
+			},
+		};
+	}
+
+	return false;
+};
+
+const YEAR = (line) => {
+	const regex = /(YEAR(\([2|4]\)))/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "year",
+			nullable: !elements.includes("NOT"),
+
+			// Validate for YYYY to keep compatibility with all MySQL versions
+			validator: year => /\b\d{4}\b/g.test(year),
+		};
+	}
+
+	return false;
+};
+
 module.exports = {
 	BIT,
 	TINYINT,
@@ -459,4 +583,9 @@ module.exports = {
 	DOUBLE,
 	DOUBLE_PRECISION,
 	REAL,
+	DATE,
+	DATETIME,
+	TIMESTAMP,
+	TIME,
+	YEAR,
 };
