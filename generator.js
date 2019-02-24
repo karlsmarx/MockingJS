@@ -565,8 +565,119 @@ const YEAR = (line) => {
 	return false;
 };
 
-module.exports = {
-	BIT,
+const CHAR = (line) => {
+	const regex = /((CHAR|BINARY)(\(\d+\)))/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "string",
+			nullable: !elements.includes("NOT"),
+
+			// Support 255 bytes, but JS uses UTF-16 charset, so has to be 127
+			validator: str => str.length < 128,
+		};
+	}
+
+	return false;
+};
+
+// To keep MySQL compatibility
+const BINARY = CHAR;
+
+const VARCHAR = (line) => {
+	const regex = /((VARCHAR|VARBINARY)(\(\d+\)))/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "string",
+			nullable: !elements.includes("NOT"),
+
+			// Support 16384 chars cause JS uses UTF-16 charset
+			validator: str => str.length < 18383,
+		};
+	}
+
+	return false;
+};
+
+// To keep MySQL compatibility
+const VARBINARY = VARCHAR;
+
+/**
+ * I not validate the binary types cause this has to be
+ * implemented for each different type of file/object.
+ */
+const TINYBLOB = (line) => {
+	const regex = /(TINYBLOB|TINYTEXT|MEDIUMBLOB|MEDIUMTEXT|LONGBLOB|LONGTEXT)/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "binary",
+			nullable: !elements.includes("NOT"),
+		};
+	}
+
+	return false;
+};
+
+// To keep MySQL compatibility
+const TINYTEXT = TINYBLOB;
+const MEDIUMBLOB = TINYTEXT;
+const MEDIUMTEXT = MEDIUMBLOB;
+const LONGBLOB = MEDIUMTEXT;
+const LONGTEXT = LONGBLOB;
+
+const BLOB = (line) => {
+	const regex = /((BLOB|TEXT)(\(\d+\)))/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "binary",
+			nullable: !elements.includes("NOT"),
+		};
+	}
+
+	return false;
+};
+
+// To keep MySQL compatibility
+const TEXT = BLOB;
+
+const ENUM = (line) => {
+	const regex = /(ENUM|SET)/g;
+
+	if (regex.test(line)) {
+		const elements = line.trim().split(" ");
+
+		return {
+			name: elements[0].replace(/(\'|`)/g, ""), // eslint-disable-line
+			type: "enumerator",
+			nullable: !elements.includes("NOT"),
+
+			// Capture possible values for enum and set
+			values: line.match(/(?:\((.*)\))/g)[0],
+		};
+	}
+
+	return false;
+};
+
+// To keep MySQL compatibility
+const SET = ENUM;
+
+const types = {
 	TINYINT,
 	SMALLINT,
 	MEDIUMINT,
@@ -588,4 +699,78 @@ module.exports = {
 	TIMESTAMP,
 	TIME,
 	YEAR,
+	CHAR,
+	BINARY,
+	VARCHAR,
+	VARBINARY,
+	TINYBLOB,
+	TINYTEXT,
+	BLOB,
+	TEXT,
+	MEDIUMBLOB,
+	MEDIUMTEXT,
+	LONGBLOB,
+	LONGTEXT,
+	ENUM,
+	SET,
+};
+
+/**
+ * Test the field type and return his object description
+ */
+const fieldTest = (line) => {
+	const listTypes = Object.values(types);
+	for (let type of listTypes) { // eslint-disable-line
+		const result = type(line);
+
+		if (result) return result;
+	}
+
+	return undefined;
+};
+
+/**
+ * This methods parse MySQL declarations, testing field for each table
+ * and generate a object description for all in SQL file.
+ */
+const parse = (sql) => {
+	const tables = sql.match(/(CREATE.TABLE([\s\S]*?;))/g); // Capture all table declarations
+
+	const result = [];
+	if (tables) {
+		tables.forEach((table) => {
+			const lines = table.split("\n");
+
+			if (lines) {
+				const newTable = {
+					fields: [],
+				};
+
+				lines.forEach((line) => {
+					if (line.startsWith("CREATE")) {
+						newTable.name = line.match(/(?:CREATE.TABLE(.*))/g)[0].match(/\w+/g)[0]; // eslint-disable-line
+						console.log(newTable.name);
+					// } else if (line.startsWith("PRIMARY")) {
+		
+					// } else if (line.startsWith("FOREIGN")) {
+		
+					// } else {
+					} else {
+						const newField = fieldTest(line);
+						if (newField) newTable.fields.push(newField);
+					}
+				});
+
+				result.push(newTable);
+			}
+		});
+	}
+
+	return result;
+};
+
+module.exports = {
+	...types,
+	fieldTest,
+	parse,
 };
